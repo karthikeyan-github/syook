@@ -1,9 +1,10 @@
 module.exports = {
 	transmissionDelay: 1, /*Mins*/
-	numberOfConnectionRetry: 5,
+	reconnectDuration: 10, /*Seconds*/
+	maxNumberOfReconnect: 20,
 	seperator: "|",
 	numberOfEncryption: {
-		min: 5,
-		max: 10
+		min: 49,
+		max: 499
 	}
 };

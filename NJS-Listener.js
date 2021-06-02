@@ -7,16 +7,23 @@ const listenerConfig = require('./app/listener/config');
 const appUtils = require('./app/utils');
 const db = require('./config/db');
 
-let isDataReceiving = false;
+initTransmission();
 
 const listener = net.createServer(async socket => {
 	try {
 		await mongoose.connect(db.url);
-		socket.on(`data`, startScripting);
+		socket.on(`data`, data => {
+			console.log(`Receving Data.....`);
+			transmissionObj.receivedData += data;
+			setTimeout(_ => {
+				if (transmissionObj.blockProcessing) return;
+				startScripting(transmissionObj.receivedData);
+			}, listenerConfig.keepAliveTime * 1000);
+		});
 		socket.on(`error`, error => {
-			isDataReceiving = false;
 			console.log(`No data receving. Still Listening..!`);
-			setTimeout(closeServer, 5000);
+			initTransmission();
+			setTimeout(closeServer, listenerConfig.maxListeningDuration * 60 * 1000);
 		});
 	}
 	catch (e) {
@@ -29,7 +36,7 @@ listener.listen(appConstants.socketOptions.port, _ => {
 });
 
 function closeServer() {
-	if (!listener || isDataReceiving) return;
+	if (!listener || transmissionObj.isDataReceiving) return;
 	console.log(`Close Listening. Good Bye...`);
 	listener.close();
 	process.exit();
@@ -37,10 +44,12 @@ function closeServer() {
 
 function startScripting(encryptedString) {
 	if (!encryptedString || (encryptedString && !encryptedString.length)) return;
-	isDataReceiving = true;
-	console.log(`Receving Data`);
+	transmissionObj.isDataReceiving = true;
+	transmissionObj.receivedData = "";
+	transmissionObj.blockProcessing = false;
+	console.log(`Data Received :-)`);
 	const personObj = {},
-	splitedEncryptString = encryptedString.toString().split(listenerConfig.seperator);
+	splitedEncryptString = encryptedString.split(listenerConfig.seperator);
 
 	for (let s of splitedEncryptString) {
 		let decryptedString = appUtils.decrypt(s);
@@ -65,4 +74,12 @@ function startScripting(encryptedString) {
 	}
 
 	PersonRoute.logData(personObj, new Date());
+};
+
+function initTransmission() {
+	let transmissionObj = { 
+		receivedData: "", 
+		isDataReceiving: false, 
+		blockProcessing: false
+	};
 };

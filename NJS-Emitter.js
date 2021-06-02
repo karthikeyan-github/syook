@@ -5,18 +5,19 @@ const emitterConfig = require('./app/emitter/config');
 const Person = require('./app/emitter/person');
 const personPool = require('./app/emitter/personPool');
 
-const emitter = net.createConnection(appConstants.socketOptions, createString);
 let numberOfRetry = 0;
 
+const emitter = net.createConnection(appConstants.socketOptions, createString);
+
 emitter.on(`close`, _ => {
-	++numberOfRetry;
-	if (numberOfRetry > emitterConfig.numberOfConnectionRetry) {
+	if (numberOfRetry > emitterConfig.maxNumberOfReconnect) {
 		console.log(`Connection Closed...!`);
 		process.exit();
 	}
 	else {
-		console.log(`Connection Retrying...!`);
-		setTimeout(reEstablishConnection, 3000);
+		++numberOfRetry;
+		console.log(`Reconnecting...!`);
+		setTimeout(reEstablishConnection, emitterConfig.reconnectDuration * 1000);
 	}
 });
 
@@ -45,14 +46,12 @@ function createString() {
 		emitterConfig.numberOfEncryption.max
 	);
 
-	console.log('numberOfEncryption => ', numberOfEncryption);
 	for (let i = 0; i < numberOfEncryption; i++) {
 		let person = new Person(...personPool.getRandomPerson());
 		let encryptedString = appUtils.encrypt(person);
-		dataString += ((dataString && dataString.length && emitterConfig.seperator || "") + encryptedString);
+		dataString += ((dataString && dataString.length && emitterConfig.seperator || "") + encryptedString.toString());
 	}
 
 	emitter.write(dataString);
-	// setTimeout(createString, appConstants.transmissionDelay * 60 * 1000);
-	setTimeout(createString, 10000);
+	setTimeout(createString, emitterConfig.transmissionDelay * 60 * 1000);
 };
