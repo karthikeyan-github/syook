@@ -7,6 +7,7 @@ const listenerConfig = require('./app/listener/config');
 const appUtils = require('./app/utils');
 const db = require('./config/db');
 
+let transmissionObj;
 initTransmission();
 
 const listener = net.createServer(async socket => {
@@ -77,7 +78,7 @@ function startScripting(encryptedString) {
 };
 
 function initTransmission() {
-	let transmissionObj = { 
+	transmissionObj = { 
 		receivedData: "", 
 		isDataReceiving: false, 
 		blockProcessing: false
