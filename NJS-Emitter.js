@@ -1,6 +1,7 @@
 const net = require('net');
 const appUtils = require('./app/utils');
 const appConstants = require('./config/constants');
+const emitterConfig = require('./app/emitter/config');
 const Person = require('./app/emitter/person');
 const personPool = require('./app/emitter/personPool');
 
@@ -9,7 +10,7 @@ let numberOfRetry = 0;
 
 emitter.on(`close`, _ => {
 	++numberOfRetry;
-	if (numberOfRetry == 5) {
+	if (numberOfRetry > emitterConfig.numberOfConnectionRetry) {
 		console.log(`Connection Closed...!`);
 		process.exit();
 	}
@@ -38,12 +39,17 @@ emitter.on(`error`, err => {
 function createString() {
 	if (!emitter) return;
 
-	let dataString = "", numberOfEncryption = appUtils.getRandomInt(appConstants.numberOfEncryption.min, appConstants.numberOfEncryption.max);
+	let dataString = "",
+	numberOfEncryption = appUtils.getRandomInt(
+		emitterConfig.numberOfEncryption.min, 
+		emitterConfig.numberOfEncryption.max
+	);
+
 	console.log('numberOfEncryption => ', numberOfEncryption);
 	for (let i = 0; i < numberOfEncryption; i++) {
 		let person = new Person(...personPool.getRandomPerson());
 		let encryptedString = appUtils.encrypt(person);
-		dataString += ((dataString && dataString.length && appConstants.seperator || "") + encryptedString);
+		dataString += ((dataString && dataString.length && emitterConfig.seperator || "") + encryptedString);
 	}
 
 	emitter.write(dataString);

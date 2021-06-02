@@ -3,15 +3,20 @@ const async = require('async');
 const mongoose = require("mongoose");
 const PersonRoute = require('./app/listener/person');
 const appConstants = require('./config/constants');
+const listenerConfig = require('./app/listener/config');
 const appUtils = require('./app/utils');
 const db = require('./config/db');
+
+let isDataReceiving = false;
 
 const listener = net.createServer(async socket => {
 	try {
 		await mongoose.connect(db.url);
 		socket.on(`data`, startScripting);
 		socket.on(`error`, error => {
-			console.log(`Error while receving data. Still Listening..!`);
+			isDataReceiving = false;
+			console.log(`No data receving. Still Listening..!`);
+			setTimeout(closeServer, 5000);
 		});
 	}
 	catch (e) {
@@ -23,11 +28,19 @@ listener.listen(appConstants.socketOptions.port, _ => {
 	console.log(`Listening on: ${listener.address().port}`);
 });
 
+function closeServer() {
+	if (!listener || isDataReceiving) return;
+	console.log(`Close Listening. Good Bye...`);
+	listener.close();
+	process.exit();
+};
+
 function startScripting(encryptedString) {
 	if (!encryptedString || (encryptedString && !encryptedString.length)) return;
+	isDataReceiving = true;
 	console.log(`Receving Data`);
 	const personObj = {},
-	splitedEncryptString = encryptedString.toString().split(appConstants.seperator);
+	splitedEncryptString = encryptedString.toString().split(listenerConfig.seperator);
 
 	for (let s of splitedEncryptString) {
 		let decryptedString = appUtils.decrypt(s);
